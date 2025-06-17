@@ -1,3 +1,7 @@
+locals {
+  project_id = "demo"
+}
+
 resource "google_iam_workload_identity_pool" "github_ci" {
   workload_identity_pool_id = "github-ci"
   description               = "Workload Identity Pool for CI/CD"
@@ -44,3 +48,21 @@ resource "google_service_account_iam_policy" "demo" {
   service_account_id = google_service_account.demo.id
   policy_data        = data.google_iam_policy.sa_user.policy_data
 }
+
+data "google_iam_policy" "artifact_registry" {
+  binding {
+    role = "roles/artifactregistry.writer"
+    members = [
+      "serviceAccount:github-actions-demo@${local.project_id}.iam.gserviceaccount.com",
+    ]
+  }
+}
+
+resource "google_artifact_registry_repository_iam_policy" "registry_iam_policy" {
+  provider    = google-beta
+  project     = local.project_id
+  repository  = "oidc-demo-artifactory"
+  location    = "europe-west3"
+  policy_data = data.google_iam_policy.artifact_registry.policy_data
+}
+
