@@ -1,0 +1,36 @@
+'on':
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  get-secrets:
+    runs-on: arc-runner-demo
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Troubleshooting Token Claims
+        run: |
+          curl -sSL -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | \
+          jq "{ jwt: .value, role: \"$VAULT_ROLE\" }" > ./token.json
+          
+          echo 'GitHub Actions Token Claims'
+          cat ./token.json | jq -r '.jwt | split(".") | .[1] | @base64d' | jq
+
+      - name: Retrieve secret from Vault
+        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b
+        with:
+          role: "oidc-demo"
+          secrets: |
+            secret/data/oidc-demo MY_SECRET
+          url: "https://vault.mycompany.com:8200"
+          method: "jwt"
+          path: "oidc-demo"
+          exportEnv: true
+          tlsSkipVerify: true
+
+      - name: Use secret from Vault
+        run: |
+          # This step has access to the secret retrieved above;
+          echo ${{ env.MY_SECRET }}
