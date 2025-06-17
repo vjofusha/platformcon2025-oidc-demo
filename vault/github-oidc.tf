@@ -23,3 +23,15 @@ resource "vault_jwt_auth_backend_role" "oidc_demo" {
   user_claim      = "actor"
   token_ttl       = 300 # 5 minutes
 }
+
+data "vault_policy_document" "oidc_demo" {
+  rule {
+    path         = "secret/data/${local.name}"
+    capabilities = ["read"]
+  }
+}
+
+resource "vault_policy" "oidc_demo" {
+  name   = local.name
+  policy = data.vault_policy_document.oidc_demo.hcl
+}
