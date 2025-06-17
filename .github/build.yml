@@ -1,0 +1,32 @@
+'on':
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    env:
+      IMAGE_NAME: <ARTIFACT_REGISTRY>/oidc-demo
+    steps:
+      - uses: 'actions/checkout@v4'
+      - uses: 'google-github-actions/auth@v2'
+        with:
+          # The following values should be replaced with your actual project ID, service account, workload identity pool and provider
+          workload_identity_provider: 'projects/<YOUR_PROJECT_ID>/locations/global/workloadIdentityPools/github-ci/providers/github-actions-ci'
+          service_account: "github-actions-demo@demo.iam.gserviceaccount.com"
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: Configure auth
+        run: gcloud auth configure-docker europe-west3-docker.pkg.dev
+
+      - name: Build the Docker image
+        run: docker build -t $IMAGE_NAME:latest -f Dockerfile .
+
+      - name: Publish
+        run: docker push --all-tags $IMAGE_NAME
